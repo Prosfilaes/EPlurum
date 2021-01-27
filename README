@@ -8,7 +8,7 @@ pair. Thoughts of what purely computational coprocessors might
 be useful. 
 
 
-Proto-types:
+Types:
 	Integer
 	String
 	Real
@@ -18,15 +18,14 @@ It has a quasi-stack structure; any variable can be referenced relative
 to the stack pointer, absolutely or the lowest 26 can be named as 
 lower-case Latin letters,
 
-type A is Integer;
+processor A is Integer begin
+	...
+end
 
 Each processor has 
 	accept x
 		read top element of message queue, store it in x
 		this blocks if the queue is empty
-	accept_with_return x
-		accept x, but also store return address on return stack
-		this blocks if the queue is empty 
 	accept_from x, type
 		accept x but search queue for first message from type
 		this blocks if the queue is empty
@@ -34,10 +33,6 @@ Each processor has
 		send x to processor of type, converting it as appropriate
 	send_as_boolean x, type
 		send x, converting it to boolean
-	return x
-		send x to top of return stack, popping that
-	return_as_boolean x
-		return x after converting to boolean
 	bumpsp n
 		add n to the stack pointer, making that much more stack 
 		available. This is theoretically filled with random
@@ -52,23 +47,17 @@ Each processor has
 		stops the processor; it is undefined what happens
 		if a message is sent to this processor
 
-	empty
-		pseudo-register indicating the message queue is empty
-	includes(type)
-		builtin function indicating the message queue includes
-		a message from type 
 	<<tag>>
 		label tag for goto target
 
-An Integer type processor has
+An Integer or Real type processor has
 	add a, b, c (c = a + b)
 	sub a, b, c (c = a - b)
-	times a, b, c (c = a * b)
-	divides a, b, c (c = a / b, with b == 0 being undefined)
 	gt, lt, eq, gte, lte
-	and, or, xor, not
-	andb, orb, xorb
 (though probably in a C or Ada, more usable fashion)
+
+A String type processor has
+	concat a, b, c (c = a + b)
 
 A Stdio type processor is a String processor with 
 	readln x
@@ -77,8 +66,8 @@ A Stdio type processor is a String processor with
 All processors start at the start of the program and run concurrently.
 
 -- 99 bottles of beer on the wall, with running floating point volume
-type Count is Integer begin
-	add 99, 0, a
+processor Count is Integer begin
+	accept a
 	<<loop>>
 	send a, Beer
 	sub a, 1, a
@@ -87,7 +76,7 @@ type Count is Integer begin
 	exit
 end
 -- Volume is independent of Count to reduce syncing
-type Volume is Real begin
+processor Volume is Real begin
 	add 0.355, 0, a
 	<<loop>>
 	send a, Beer
@@ -96,10 +85,12 @@ type Volume is Real begin
 	if_goto b, loop
 	exit
 end
--- This is basically a main function, though as all
+-- This is basically a main function, though all
 -- types it starts at the start of the program
 -- Could read count from stdin
-type Beer is Stdio begin
+processor Beer is Stdio begin
+	readline a
+	send a, Count
 	<<loop>>
 	accept_from a, Count
 	accept_from b, Volume
@@ -113,13 +104,43 @@ type Beer is Stdio begin
 	neq a, "1", d
 	if_goto d, loop
 	exit
+end
 	
+Basic extensions
+
+Each processor has 
+	accept_with_return x
+		accept x, but also store return address on return stack
+		this blocks if the queue is empty 
+	return x
+		send x to top of return stack, popping that
+	return_as_boolean x
+		return x after converting to boolean
+
+	empty
+		pseudo-register indicating the message queue is empty
+	includes(type)
+		builtin function indicating the message queue includes
+		a message from type 
+
+An Integer type processor has
+	times a, b, c (c = a * b)
+	moddiv a, b, c, d (c = a / b, d = a mod b; b == 0 is undefined) 
+	and, or, xor, not
+	andbool, orbool, xorbool
+
+A String type processor has
+	some sort of regex engine
+	substring processing
+
+Syntax extensions
+	Ada (or C) style syntax, instead of assembly style syntax
 
 Array extension
-
-	Array of type (not proto-type)
+	Array of type
 	type B is Array of A;
 	Add to all processors:
 	send_as_array (x, type)
 		send x, converting it to one element array of x
 
+Vector extensions
