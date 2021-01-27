@@ -144,3 +144,7 @@ Array extension
 		send x, converting it to one element array of x
 
 Vector extensions
+....
+
+This file was released by David Starner under the CC-0 license.
+
